@@ -1,0 +1,1188 @@
+{
+  "Description": "DevOps assignment 1 - Candidate-X4aB2gDr",
+  "Parameters": {
+    "VPCSubnetCidrBlock": {
+      "Description": "Type in VPC CIDR Block. (ex: 10.0.0.0/16)",
+      "Type": "String",
+      "Default": "10.0.0.0/16",
+      "MinLength": "9",
+      "MaxLength": "18",
+      "AllowedPattern": "(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})/(\\d{1,2})"
+    },
+    "PublicSubnetCidrBlock1": {
+      "Description": "Type in Public Subnet 1 CIDR Block.",
+      "Type": "String",
+      "Default": "10.0.1.0/24",
+      "MinLength": "9",
+      "MaxLength": "18",
+      "AllowedPattern": "(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})/(\\d{1,2})"
+    },
+    "PublicSubnetCidrBlock2": {
+      "Description": "Type in Public Subnet 2 CIDR Block.",
+      "Type": "String",
+      "Default": "10.0.2.0/24",
+      "MinLength": "9",
+      "MaxLength": "18",
+      "AllowedPattern": "(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})/(\\d{1,2})"
+    },
+    "PrivateSubnetCidrBlock1": {
+      "Description": "Type in Private Subnet 1 CIDR Block.",
+      "Type": "String",
+      "Default": "10.0.8.0/24",
+      "MinLength": "9",
+      "MaxLength": "18",
+      "AllowedPattern": "(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})/(\\d{1,2})"
+    },
+    "RemoteMgmtNetwork": {
+      "Description": "Source Network IP CIDR Block that is used to manage instances. Visit http://icanhazip.com to find out your Public IP (ex: 202.235.100.8/32)",
+      "Type": "String",
+      "MinLength": "9",
+      "MaxLength": "18",
+      "Default": "192.168.1.0/24",
+      "AllowedPattern": "(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})/(\\d{1,2})",
+      "ConstraintDescription": "Must be a valid CIDR range of the form a.b.c.d/z."
+    },
+	"KeyName": {
+      "Description" : "Select EC2 SSH Keypair to access to the instance",
+      "Type": "AWS::EC2::KeyPair::KeyName",
+	  "Default" : "candidate-x4ab2gdr"
+    },
+	"AccessKey": {
+      "Description" : "Type in AWS Access Key that has access to S3 bucket, EC2, and CloudFormation",
+      "Type": "String",
+	  "Default" : "AKIAJYDKJZ3C4GZUYXTQ"
+    },	
+	"SecretKey": {
+      "Description" : "Type in AWS Secret Key that has access to S3 bucket, EC2, and CloudFormation",
+	  "NoEcho": "true",
+      "Type": "String",
+	  "Default" : "qxLAjs30Ldo4xMcaqMPbkFue4h/6UdKhRwSdT4kK"
+    },	
+	"S3BucketName": {
+      "Description" : "Type in S3 Bucket Name for the WordPress config files",
+      "Type": "String",
+	  "Default" : "candidate-x4ab2gdr"
+    },
+    "InstanceType": {
+      "Description": "Select Instance Type.",
+      "Type": "String",
+      "Default": "t2.small",
+      "AllowedValues": ["t2.micro", "t2.small"],
+	  "ConstraintDescription": "Must be a valid EC2 instance type."
+	},
+	"ContentManifest" : {
+		"Default" : "/wordpress/: { include wordpress }",
+		"Description" : "Manifest of roles to add to nodes.pp",
+		"Type" : "String"
+	},
+	"ContentLocation" : {
+		"Default" : "https://s3.amazonaws.com/candidate-x4ab2gdr/wordpress-puppet-config.tar.gz",
+		"Description" : "Location of package (Zip, GZIP or Git repository URL) that includes the PuppetMaster content",
+		"Type" : "String"
+	},
+	"DatabaseUser": {
+		"Default" : "wpadmin",
+		"Type": "String",
+		"Description" : "Type in WordPress database user account name",
+		"MinLength": "1",
+		"MaxLength": "16",
+		"AllowedPattern" : "[a-zA-Z][a-zA-Z0-9]*",
+		"ConstraintDescription" : "must begin with a letter and contain only alphanumeric characters."
+	},
+	"DatabasePassword": {
+		 "Default" : "password",
+		 "NoEcho": "true",
+		 "Type": "String",
+		 "Description" : "Type in WordPress database user account password",
+		 "MinLength": "1",
+		 "MaxLength": "41",
+		 "AllowedPattern" : "[a-zA-Z0-9]*",
+		 "ConstraintDescription" : "must contain only alphanumeric characters."
+	}
+  },
+  
+	"Mappings" : {
+		"AWSInstanceType2Arch" : {
+			"t2.micro" : { "Arch" : "64" },
+			"t2.small" : { "Arch" : "64" }
+		},
+		"AWSRegionArch2AMI" : {
+			"us-east-1" : { "32" : "ami-7f418316", "64" : "ami-4fffc834" },
+			"us-east-2" : { "32" : "NOT Supported", "64" : "ami-8a7859ef" },
+			"us-west-1" : { "32" : "ami-951945d0", "64" : "ami-3a674d5a" },
+			"us-west-2" : { "32" : "NOT Supported", "64" : "ami-aa5ebdd2" },
+			"eu-west-1" : { "32" : "ami-24506250", "64" : "ami-ebd02392" },
+			"ap-southeast-1" : { "32" : "ami-74dda626", "64" : "ami-7edda62c" },
+			"ap-northeast-1" : { "32" : "ami-dcfa4edd", "64" : "ami-4af5022c" }
+		}
+	},
+  
+  
+  "Resources": {
+    "VPC": {
+      "Type": "AWS::EC2::VPC",
+      "Properties": {
+        "EnableDnsSupport": "true",
+        "EnableDnsHostnames": "true",
+        "CidrBlock": {"Ref": "VPCSubnetCidrBlock"},
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": {"Ref": "AWS::StackName"}
+          },
+          {
+            "Key": "Creator",
+            "Value": "Candidate-X4aB2gDr"
+          }
+        ]
+      }
+    },
+    "PublicSubnet1": {
+      "Type": "AWS::EC2::Subnet",
+      "DependsOn": "VPC",
+      "Properties": {
+        "VpcId": {"Ref": "VPC"},
+        "AvailabilityZone": {"Fn::Join": ["", [{"Ref": "AWS::Region"}, "a"]]},
+        "CidrBlock": {"Ref": "PublicSubnetCidrBlock1"},
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": {"Fn::Join": ["", [{"Ref": "AWS::StackName"}, "-public-az1"]]}
+          },
+          {
+            "Key": "Creator",
+            "Value": "Candidate-X4aB2gDr"
+          }
+        ]
+      }
+    },
+    "PublicSubnet2": {
+      "Type": "AWS::EC2::Subnet",
+      "DependsOn": "VPC",
+      "Properties": {
+        "VpcId": {"Ref": "VPC"},
+        "AvailabilityZone": {"Fn::Join": ["", [{"Ref": "AWS::Region"}, "b"]]},
+        "CidrBlock": {"Ref": "PublicSubnetCidrBlock2"},
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": {"Fn::Join": ["", [{"Ref": "AWS::StackName"}, "-public-az2"]]}
+          },
+          {
+            "Key": "Creator",
+            "Value": "Candidate-X4aB2gDr"
+          }
+        ]
+      }
+    },
+    "InternetGateway": {
+      "Type": "AWS::EC2::InternetGateway",
+      "Properties": {
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": {"Ref": "AWS::StackName"}
+          },
+          {
+            "Key": "Creator",
+            "Value": "Candidate-X4aB2gDr"
+          }
+        ]
+      }
+    },
+    "GatewayToInternet": {
+      "Type": "AWS::EC2::VPCGatewayAttachment",
+      "DependsOn": [
+        "InternetGateway",
+        "VPC"
+      ],
+      "Properties": {
+        "VpcId": {"Ref": "VPC"},
+        "InternetGatewayId": {"Ref": "InternetGateway"}
+      }
+    },
+    "PublicRouteTable": {
+      "Type": "AWS::EC2::RouteTable",
+      "DependsOn": "VPC",
+      "Properties": {
+        "VpcId": {"Ref": "VPC"},
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": {"Fn::Join": ["", [{"Ref": "AWS::StackName"}, "-public"]]}
+          },
+          {
+            "Key": "Creator",
+            "Value": "Candidate-X4aB2gDr"
+          }
+        ]
+      }
+    },
+    "PublicRoute": {
+      "Type": "AWS::EC2::Route",
+      "DependsOn": [
+        "PublicRouteTable",
+        "InternetGateway"
+      ],
+      "Properties": {
+        "RouteTableId": {"Ref": "PublicRouteTable"},
+        "DestinationCidrBlock": "0.0.0.0/0",
+        "GatewayId": { "Ref": "InternetGateway"}
+      }
+    },
+    "PublicSubnetRouteTableAssociation1": {
+      "Type": "AWS::EC2::SubnetRouteTableAssociation",
+      "DependsOn": [
+        "PublicSubnet1",
+        "PublicRouteTable"
+      ],
+      "Properties": {
+        "SubnetId": {"Ref": "PublicSubnet1"},
+        "RouteTableId": {"Ref": "PublicRouteTable"}
+      }
+    },
+    "PublicSubnetRouteTableAssociation2": {
+      "Type": "AWS::EC2::SubnetRouteTableAssociation",
+      "DependsOn": [
+        "PublicSubnet2",
+        "PublicRouteTable",
+        "GatewayToInternet"
+      ],
+      "Properties": {
+        "SubnetId": {"Ref": "PublicSubnet2"},
+        "RouteTableId": {"Ref": "PublicRouteTable"}
+      }
+    },
+    "PrivateSubnet1": {
+      "Type": "AWS::EC2::Subnet",
+      "DependsOn": "VPC",
+      "Properties": {
+        "VpcId": {"Ref": "VPC"},
+        "AvailabilityZone": {"Fn::Join": ["", [{"Ref": "AWS::Region"}, "a"]]},
+        "CidrBlock": {"Ref": "PrivateSubnetCidrBlock1"},
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": {"Fn::Join": ["", [{"Ref": "AWS::StackName"}, "-private-az1"]]}
+          },
+          {
+            "Key": "Creator",
+            "Value": "Candidate-X4aB2gDr"
+          }
+        ]
+      }
+    },
+	"NATGateway": {
+	   "Type": "AWS::EC2::NatGateway",
+	   "DependsOn": ["GatewayToInternet", "NATEIP"],
+	   "Properties": {
+		  "AllocationId": {"Fn::GetAtt": ["NATEIP", "AllocationId"]},
+          "SubnetId": {"Ref":"PrivateSubnet1"}
+        }		
+	},
+	"NATEIP": {  
+         "Type": "AWS::EC2::EIP",
+         "Properties": {  
+            "Domain": "vpc"
+         }
+    },
+    "PrivateRouteTable": {
+      "Type": "AWS::EC2::RouteTable",
+      "DependsOn": "VPC",
+      "Properties": {
+        "VpcId": {"Ref": "VPC"},
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": {"Fn::Join": ["", [{"Ref": "AWS::StackName"}, "-private"]]}
+          },
+          {
+            "Key": "Creator",
+            "Value": "Candidate-X4aB2gDr"
+          }
+        ]
+      }
+    },
+    "PrivateSubnetRouteTableAssociation1": {
+      "Type": "AWS::EC2::SubnetRouteTableAssociation",
+      "DependsOn": [
+        "PrivateSubnet1",
+        "PrivateRouteTable"
+      ],
+      "Properties": {
+        "SubnetId": {"Ref": "PrivateSubnet1"},
+        "RouteTableId": {"Ref": "PrivateRouteTable"}
+      }
+    },
+    "PrivateNATRouteTableAssociation":{  
+         "Type":"AWS::EC2::Route",
+		 "DependsOn": "NATGateway",
+         "Properties": {  
+            "RouteTableId": {"Ref":"PrivateRouteTable"},
+            "DestinationCidrBlock": "0.0.0.0/0",
+            "NatGatewayId": {"Ref": "NATGateway"}
+         }
+    },
+    "S3VpcEndpoint": {
+      "Type": "AWS::EC2::VPCEndpoint",
+      "DependsOn": [
+        "VPC",
+        "PrivateRouteTable",
+        "PublicRouteTable"
+      ],
+      "Properties": {
+        "PolicyDocument": {
+          "Statement": [
+            {
+              "Action": "*",
+              "Effect": "Allow",
+              "Resource": "*",
+              "Principal": "*"
+            }
+          ]
+        },
+        "RouteTableIds": [
+          {"Ref": "PrivateRouteTable"},
+          {"Ref": "PublicRouteTable"}
+        ],
+        "ServiceName": {"Fn::Join": ["", ["com.amazonaws.", {"Ref": "AWS::Region"}, ".s3" ]]},
+        "VpcId": {"Ref": "VPC"}
+      }
+    },
+    "PublicNetworkAcl": {
+      "Type": "AWS::EC2::NetworkAcl",
+      "DependsOn": "VPC",
+      "Properties": {
+        "VpcId": {"Ref": "VPC"},
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": {"Fn::Join": ["", [{"Ref": "AWS::StackName"}, "-public-acl"]]}
+          },
+          {
+            "Key": "Creator",
+            "Value": "Candidate-X4aB2gDr"
+          }
+        ]
+      }
+    },
+    "InboundPublicNetworkAclAllowHTTP": {
+      "Type": "AWS::EC2::NetworkAclEntry",
+      "DependsOn": "PublicNetworkAcl",
+      "Properties": {
+        "NetworkAclId": {"Ref": "PublicNetworkAcl"},
+        "RuleNumber": "100",
+        "Protocol": "6",
+        "RuleAction": "allow",
+        "Egress": "false",
+        "CidrBlock": "0.0.0.0/0",
+        "PortRange": {
+          "From": "80",
+          "To": "80"
+        }
+      }
+    },
+    "InboundPublicNetworkAclAllowHTTPS": {
+      "Type": "AWS::EC2::NetworkAclEntry",
+      "DependsOn": "PublicNetworkAcl",
+      "Properties": {
+        "NetworkAclId": {"Ref": "PublicNetworkAcl"},
+        "RuleNumber": "105",
+        "Protocol": "6",
+        "RuleAction": "allow",
+        "Egress": "false",
+        "CidrBlock": "0.0.0.0/0",
+        "PortRange": {
+          "From": "443",
+          "To": "443"
+        }
+      }
+    },
+    "InboundPublicNetworkAclAllowReturnTraffic": {
+      "Type": "AWS::EC2::NetworkAclEntry",
+      "DependsOn": "PublicNetworkAcl",
+      "Properties": {
+        "NetworkAclId": {"Ref": "PublicNetworkAcl"},
+        "RuleNumber": "110",
+        "Protocol": "6",
+        "RuleAction": "allow",
+        "Egress": "false",
+        "CidrBlock": "0.0.0.0/0",
+        "PortRange": {
+          "From": "1024",
+          "To": "65535"
+        }
+      }
+    },
+    "InboundPublicNetworkAclAllowVPCSubnets": {
+      "Type": "AWS::EC2::NetworkAclEntry",
+      "DependsOn": "PublicNetworkAcl",
+      "Properties": {
+        "NetworkAclId": {"Ref": "PublicNetworkAcl"},
+        "RuleNumber": "115",
+        "Protocol": "-1",
+        "RuleAction": "allow",
+        "Egress": "false",
+        "CidrBlock": {"Ref": "VPCSubnetCidrBlock"},
+        "PortRange": {
+          "From": "0",
+          "To": "65535"
+        }
+      }
+    },
+	"InboundPublicNetworkAclAllowRemoteMgmtSubnets": {
+      "Type": "AWS::EC2::NetworkAclEntry",
+      "DependsOn": "PublicNetworkAcl",
+      "Properties": {
+        "NetworkAclId": {"Ref": "PublicNetworkAcl"},
+        "RuleNumber": "120",
+        "Protocol": "6",
+        "RuleAction": "allow",
+        "Egress": "false",
+        "CidrBlock": {"Ref": "RemoteMgmtNetwork"},
+        "PortRange": {
+          "From": "22",
+          "To": "22"
+        }
+      }
+    },
+    "OutboundPublicNetworkAclAllowAll": {
+      "Type": "AWS::EC2::NetworkAclEntry",
+      "DependsOn": "PublicNetworkAcl",
+      "Properties": {
+        "NetworkAclId": {"Ref": "PublicNetworkAcl"},
+        "RuleNumber": "100",
+        "Protocol": "-1",
+        "RuleAction": "allow",
+        "Egress": "true",
+        "CidrBlock": "0.0.0.0/0",
+        "PortRange": {
+          "From": "0",
+          "To": "65535"
+        }
+      }
+    },
+    "PublicSubnetNetworkAclAssociation1": {
+      "Type": "AWS::EC2::SubnetNetworkAclAssociation",
+      "DependsOn": ["PublicSubnet1", "PublicNetworkAcl"],
+      "Properties": {
+        "SubnetId": {"Ref": "PublicSubnet1" },
+        "NetworkAclId": {"Ref": "PublicNetworkAcl"}
+      }
+    },
+    "PublicSubnetNetworkAclAssociation2": {
+      "Type": "AWS::EC2::SubnetNetworkAclAssociation",
+      "DependsOn": ["PublicSubnet2", "PublicNetworkAcl"],
+      "Properties": {
+        "SubnetId": {"Ref": "PublicSubnet2" },
+        "NetworkAclId": {"Ref": "PublicNetworkAcl"}
+      }
+    },
+    "PrivateNetworkAcl": {
+      "Type": "AWS::EC2::NetworkAcl",
+      "DependsOn": "VPC",
+      "Properties": {
+        "VpcId": {"Ref": "VPC"},
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": {"Fn::Join": ["", [{"Ref": "AWS::StackName"}, "-private-acl"]]}
+          },
+          {
+            "Key": "Creator",
+            "Value": "Candidate-X4aB2gDr"
+          }
+        ]
+      }
+    },
+    "InboundEphemeralPrivateNetworkAclAllowAll": {
+      "Type": "AWS::EC2::NetworkAclEntry",
+      "DependsOn": "PrivateNetworkAcl",
+      "Properties": {
+        "NetworkAclId": {"Ref": "PrivateNetworkAcl"},
+        "RuleNumber": "100",
+        "Protocol": "-1",
+        "RuleAction": "allow",
+        "Egress": "false",
+        "CidrBlock": "0.0.0.0/0",
+        "PortRange": {
+          "From": "0",
+          "To": "65535"
+        }
+      }
+    },
+    "OutboundPrivateNetworkAclAllowAll": {
+      "Type": "AWS::EC2::NetworkAclEntry",
+      "DependsOn": "PrivateNetworkAcl",
+      "Properties": {
+        "NetworkAclId": {"Ref": "PrivateNetworkAcl"},
+        "RuleNumber": "100",
+        "Protocol": "-1",
+        "RuleAction": "allow",
+        "Egress": "true",
+        "CidrBlock": "0.0.0.0/0",
+        "PortRange": {
+          "From": "0",
+          "To": "65535"
+        }
+      }
+    },
+    "PrivateSubnetNetworkAclAssociation1": {
+      "Type": "AWS::EC2::SubnetNetworkAclAssociation",
+      "DependsOn": [
+        "PrivateSubnet1",
+        "PrivateNetworkAcl"
+      ],
+      "Properties": {
+        "SubnetId": {"Ref": "PrivateSubnet1"},
+        "NetworkAclId": {"Ref": "PrivateNetworkAcl"}
+      }
+    },
+	"WebServerSecurityGroup": {
+      "Type": "AWS::EC2::SecurityGroup",
+      "DependsOn": "VPC",
+      "Properties": {
+        "GroupDescription": "Inbound HTTP Access to WordPress Webservers",
+        "VpcId": {"Ref": "VPC"},
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": {"Fn::Join": ["", [{"Ref": "AWS::StackName"}, "-ExternalHTTP-to-WordPress"]]}
+          },
+          {
+            "Key": "Creator",
+            "Value": "Candidate-X4aB2gDr"
+          }
+        ],
+        "SecurityGroupIngress": [
+          {
+            "IpProtocol": "6",
+			"FromPort" : "80",
+            "ToPort" : "80",
+            "CidrIp": "0.0.0.0/0"
+          }
+        ],
+        "SecurityGroupEgress": [
+          {
+            "IpProtocol": "-1",
+            "CidrIp": "0.0.0.0/0"
+          }
+        ]
+      }
+    },
+    "InternalAccessSecurityGroup": {
+      "Type": "AWS::EC2::SecurityGroup",
+      "DependsOn": "VPC",
+      "Properties": {
+        "GroupDescription": "Instance to Instance Access in VPC",
+        "VpcId": {"Ref": "VPC"},
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": {"Fn::Join": ["", [{"Ref": "AWS::StackName"}, "-instance-to-instance"]]}
+          },
+          {
+            "Key": "Creator",
+            "Value": "Candidate-X4aB2gDr"
+          }
+        ]
+      }
+    },
+    "InternalAccessSecurityGroupIngress": {
+      "Type": "AWS::EC2::SecurityGroupIngress",
+      "DependsOn": "InternalAccessSecurityGroup",
+      "Properties": {
+        "GroupId": {"Ref": "InternalAccessSecurityGroup"},
+        "IpProtocol": "-1",
+        "SourceSecurityGroupId": {
+          "Ref": "InternalAccessSecurityGroup"
+        }
+      }
+    },
+    "RemoteAccessSecurityGroup": {
+      "Type": "AWS::EC2::SecurityGroup",
+      "Properties": {
+        "GroupDescription": "Instance Access via Remote Management Network",
+        "VpcId": {"Ref": "VPC"},
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": {"Fn::Join": ["", [{"Ref": "AWS::StackName"}, "-remote-to-instance"]]}
+          },
+          {
+            "Key": "Creator",
+            "Value": "Candidate-X4aB2gDr"
+          }
+        ],
+        "SecurityGroupIngress": [
+          {
+            "IpProtocol": "-1",
+            "CidrIp": {"Ref": "RemoteMgmtNetwork"}
+          }
+        ],
+        "SecurityGroupEgress": [
+          {
+            "IpProtocol": "-1",
+            "CidrIp": "0.0.0.0/0"
+          }
+        ]
+      }
+    },
+	
+	"PuppetMasterInstance" : {
+		"Type" : "AWS::EC2::Instance",
+		"DependsOn": [ "RemoteAccessSecurityGroup", "PublicRoute", "PublicSubnetRouteTableAssociation1", "PublicSubnetRouteTableAssociation2", "PrivateSubnetRouteTableAssociation1", "PrivateNATRouteTableAssociation" ],
+		"Metadata" : {
+			"AWS::CloudFormation::Init" : {	
+				"config" : {
+					"packages" : {
+						"yum" : {
+							"puppet" : [],
+							"puppet-server" : [],
+							"ruby-devel" : [],
+							"gcc" : [],
+							"make" 	: [],
+							"rubygems" : []
+						},
+						"rubygems" : {
+							"json" 	: []
+						}
+					},
+					"sources" : {
+						"/etc/puppet" : { "Ref" : "ContentLocation" }
+					},
+					"files" : {
+						"/etc/yum.repos.d/epel.repo" : {
+							"source" : "https://s3.amazonaws.com/candidate-x4ab2gdr/amzLinuxEpelRepo",
+							"mode" : "000644",
+							"owner" : "root",
+							"group" : "root"
+						},
+						"/etc/puppet/autosign.conf" : {
+							"content" : "*.internal\n",
+							 "mode" : "100644",
+							 "owner" : "root",
+							 "group" : "wheel"
+						},
+						"/etc/puppet/fileserver.conf" : {
+							"content" : "[modules]\n allow *.internal\n",
+							 "mode" : "100644",
+							 "owner" : "root",
+							 "group" : "wheel"
+						},
+						"/etc/puppet/puppet.conf" : {
+							"content" : { "Fn::Join" : ["", [
+								"[main]\n",
+								" logdir=/var/log/puppet\n",
+								" rundir=/var/run/puppet\n",
+								" ssldir=$vardir/ssl\n",
+								" pluginsync=true\n",
+								"[agent]\n",
+								" classfile=$vardir/classes.txt\n",
+								" localconfig=$vardir/localconfig\n"]] },
+							"mode" : "000644",
+							"owner" : "root",
+							"group" : "root"
+						},
+						"/etc/puppet/modules/cfn/manifests/init.pp" : {
+							 "content" : "class cfn {}",
+							 "mode" : "100644",
+							 "owner" : "root",
+							 "group" : "wheel"
+						},
+						"/etc/puppet/modules/cfn/lib/facter/cfn.rb" : {
+							"source" : "https://s3.amazonaws.com/candidate-x4ab2gdr/cfn-facter-plugin.rb",
+							"mode" : "100644",
+							"owner" : "root",
+							"group" : "wheel"
+						},
+						"/etc/puppet/manifests/nodes.pp" : {
+							"content" : {"Fn::Join" : ["", [
+								"node basenode {\n",
+								" include cfn\n",
+								"}\n",
+								"node /^.*internal$/ inherits basenode {\n",
+								" case $cfn_roles {\n",
+								" ", { "Ref" : "ContentManifest" }, "\n",
+								" /wpdb/: { include wpdb } \n",
+								" }\n",
+								"}\n"]]},
+							"mode"    : "100644",
+							"owner"   : "root",
+							"group"   : "wheel"
+						},
+						"/etc/puppet/manifests/site.pp" : {
+							"content" : "import \"nodes\"\n",
+							"mode"    : "100644",
+							"owner"   : "root",
+							"group"   : "wheel"
+						}
+					},		
+					"services" : {
+						"sysvinit" : {
+							"puppetmaster" : {
+								"enabled" : "true",
+								"ensureRunning" : "true"
+							}
+						}
+					}
+				}
+			}
+		},
+		"Properties" : {
+			"InstanceType" : { "Ref" : "InstanceType" },
+			"SecurityGroupIds" : [ {"Ref" : "WebServerSecurityGroup"}, {"Ref" : "RemoteAccessSecurityGroup"}, {"Ref" : "InternalAccessSecurityGroup"} ],
+			"ImageId" : { "Fn::FindInMap" : [ "AWSRegionArch2AMI", { "Ref" : "AWS::Region" },
+						{ "Fn::FindInMap" : [ "AWSInstanceType2Arch", { "Ref" : "InstanceType" }, "Arch" ] } ] },
+			"KeyName" : { "Ref" : "KeyName" },
+			"SubnetId": {"Ref": "PublicSubnet1"},
+			"Tags": [
+				{ "Key": "Name", "Value": {"Fn::Join": ["", [{"Ref": "AWS::StackName"}, "-PuppetMaster-instance"]]}},
+				{ "Key": "Creator", "Value": "Candidate-X4aB2gDr" }
+			],
+			"UserData" : { "Fn::Base64" : { "Fn::Join" : ["", [
+				"#!/bin/bash\n",
+				"/usr/bin/sudo yum --enablerepo=epel -y install ruby-json \n",
+				"/opt/aws/bin/cfn-init --region ", { "Ref" : "AWS::Region" },
+				" -s ", { "Ref" : "AWS::StackName" }, " -r PuppetMasterInstance ",
+				" --access-key ", { "Ref" : "AccessKey" },
+				" --secret-key ", { "Ref" : "SecretKey" }, "\n",
+				"/opt/aws/bin/cfn-signal -e $? '", { "Ref" : "PuppetMasterWaitHandle" }, "'\n"]]}}
+		}
+	},
+	
+	"PuppetMasterEIP": {
+      "Type": "AWS::EC2::EIP",
+      "Properties": {
+        "Domain" : "vpc"
+      }
+    },
+    "PuppetServerEIPAssociation": {
+      "Type": "AWS::EC2::EIPAssociation",
+      "DependsOn": [
+        "PuppetMasterInstance",
+        "PuppetMasterEIP"
+      ],
+      "Properties": {
+        "InstanceId": {"Ref": "PuppetMasterInstance"},
+        "AllocationId": { "Fn::GetAtt" : [ "PuppetMasterEIP", "AllocationId" ]}
+      }
+    },
+	
+	"DatabaseInstance": {
+		"Type": "AWS::EC2::Instance",
+		"DependsOn": [ "InternalAccessSecurityGroup", "S3VpcEndpoint", "PuppetMasterInstance" ],
+		"Metadata" : {
+			"AWS::CloudFormation::Init" : {
+				"config" : {
+					"packages" : {
+						"yum" : {
+							"puppet" : [],
+							"ruby-devel" : [],
+							"gcc" : [],
+							"make" : [],
+							"rubygems" : [],
+							"jq" : []
+						},
+						"rubygems" : {
+							"json" : []
+						}
+					},
+					"files" : {
+						"/etc/yum.repos.d/epel.repo" : {
+							 "source" : "https://s3.amazonaws.com/candidate-x4ab2gdr/amzLinuxEpelRepo",
+							 "mode" : "000644",
+							 "owner" : "root",
+							 "group" : "root"
+						},
+						"/etc/puppet/puppet.conf" : {
+							"content" : { "Fn::Join" : ["", [
+								"[main]\n",
+								" logdir=/var/log/puppet\n",
+								" rundir=/var/run/puppet\n",
+								" ssldir=$vardir/ssl\n",
+								" pluginsync=true\n",
+								"[agent]\n",
+								" classfile=$vardir/classes.txt\n",
+								" localconfig=$vardir/localconfig\n",
+								" server=",{ "Fn::GetAtt" : [ "PuppetMasterInstance", "PrivateDnsName" ] },"\n"
+							]] },
+							 "mode" : "000644",
+							 "owner" : "root",
+							 "group" : "root"
+						}
+					},
+					"services" : {
+						"sysvinit" : {
+							"puppet" : {
+								"enabled" : "true",
+								"ensureRunning" : "true"
+							}
+						}
+					}
+				}
+			},			
+			"Puppet" : {
+				 "roles" : [ "wpdb" ],
+				 "database" : "WordPressDB",
+				 "user" : {"Ref" : "DatabaseUser"},
+				 "password" : {"Ref" : "DatabasePassword" }
+			}
+		},
+		"Properties": {
+			"SecurityGroupIds" : [ {"Ref" : "RemoteAccessSecurityGroup"}, {"Ref" : "InternalAccessSecurityGroup"} ],
+			"ImageId": { "Fn::FindInMap": [ "AWSRegionArch2AMI", { "Ref": "AWS::Region" }, { "Fn::FindInMap": [ "AWSInstanceType2Arch", { "Ref": "InstanceType" }, "Arch" ] } ]
+			},
+			"UserData" : { "Fn::Base64" : { "Fn::Join" : ["", [
+				"#!/bin/bash\n",
+				"/usr/bin/sudo yum --enablerepo=epel -y install ruby-json \n",
+				"/opt/aws/bin/cfn-init --region ", { "Ref" : "AWS::Region" },
+				" -s ", { "Ref" : "AWS::StackName" }, " -r DatabaseInstance ",
+				" --access-key ", { "Ref" : "AccessKey" },
+				" --secret-key ", { "Ref" : "SecretKey" }, "\n",
+				"/bin/echo wpcfn_database=WordPressDB > /tmp/wpsourceprofile; /bin/echo wpcfn_user=", { "Ref" : "DatabaseUser" } ," >> /tmp/wpsourceprofile\n",
+				"/bin/echo wpcfn_password=", { "Ref" : "DatabasePassword" } ," >> /tmp/wpsourceprofile\n",
+				"/opt/aws/bin/cfn-signal -e $? '", { "Ref" : "DatabaseWaitHandle" }, "'\n"
+			]]}},
+			"KeyName": { "Ref": "KeyName" },
+			"SubnetId": {"Ref": "PublicSubnet1"},
+			"Tags": [
+				{ "Key": "Name", "Value": {"Fn::Join": ["", [{"Ref": "AWS::StackName"}, "-Database-instance"]]}},
+				{ "Key": "Creator", "Value": "Candidate-X4aB2gDr" }
+			],
+			"InstanceType": { "Ref": "InstanceType" }
+		}
+	},
+	
+	"DatabaseEIP": {
+      "Type": "AWS::EC2::EIP",
+      "Properties": {
+        "Domain" : "vpc"
+      }
+    },
+    "DatabaseEIPAssociation": {
+      "Type": "AWS::EC2::EIPAssociation",
+      "DependsOn": [
+        "DatabaseInstance",
+        "DatabaseEIP"
+      ],
+      "Properties": {
+        "InstanceId": {"Ref": "DatabaseInstance"},
+        "AllocationId": { "Fn::GetAtt" : [ "DatabaseEIP", "AllocationId" ]}
+      }
+    },
+	
+	"WebAZ1EC2Instance": {
+		"Type": "AWS::EC2::Instance",
+		"DependsOn": [ "WebServerSecurityGroup", "DatabaseInstance" ],
+		"Metadata" : {
+			"AWS::CloudFormation::Init" : {
+				"config" : {
+					"packages" : {
+						"yum" : {
+							"puppet" : [],
+							"ruby-devel" : [],
+							"gcc" : [],
+							"make" : [],
+							"rubygems" : [],
+							"mysql" : [],
+							"jq" : []
+						},
+						"rubygems" : {
+							"json" : []
+						}
+					},
+					"files" : {
+						"/etc/yum.repos.d/epel.repo" : {
+							 "source" : "https://s3.amazonaws.com/candidate-x4ab2gdr/amzLinuxEpelRepo",
+							 "mode" : "000644",
+							 "owner" : "root",
+							 "group" : "root"
+						},
+						"/tmp/wordpress.conf" : {
+							"source" : "https://s3.amazonaws.com/candidate-x4ab2gdr/wordpress.conf",
+							 "mode" : "000644",
+							 "owner" : "root",
+							 "group" : "root"							
+						},
+						"/etc/puppet/puppet.conf" : {
+							"content" : { "Fn::Join" : ["", [
+								"[main]\n",
+								" logdir=/var/log/puppet\n",
+								" rundir=/var/run/puppet\n",
+								" ssldir=$vardir/ssl\n",
+								" pluginsync=true\n",
+								"[agent]\n",
+								" classfile=$vardir/classes.txt\n",
+								" localconfig=$vardir/localconfig\n",
+								" server=",{ "Fn::GetAtt" : [ "PuppetMasterInstance", "PrivateDnsName" ] },"\n"
+							]] },
+							 "mode" : "000644",
+							 "owner" : "root",
+							 "group" : "root"
+						}
+					},
+					"services" : {
+						"sysvinit" : {
+							"puppet" : {
+								"enabled" : "true",
+								"ensureRunning" : "true"
+							}
+						}
+					}
+				}
+			},
+			"Puppet" : {
+				 "roles" : [ "wordpress" ],
+				 "host" : { "Fn::GetAtt" : [ "DatabaseInstance", "PrivateDnsName" ] },
+				 "wpurl" : "208.2.3.8",
+				 "database" : "WordPressDB",
+				 "user" : {"Ref" : "DatabaseUser"},
+				 "password" : {"Ref" : "DatabasePassword" }
+			}
+		},
+		"Properties": {
+			"SecurityGroupIds" : [ {"Ref" : "WebServerSecurityGroup"}, {"Ref" : "RemoteAccessSecurityGroup"}, {"Ref" : "InternalAccessSecurityGroup"} ],
+			"ImageId": { "Fn::FindInMap": [ "AWSRegionArch2AMI", { "Ref": "AWS::Region" }, { "Fn::FindInMap": [ "AWSInstanceType2Arch", { "Ref": "InstanceType" }, "Arch" ] } ]
+			},
+			"UserData" : { "Fn::Base64" : { "Fn::Join" : ["", [
+				"#!/bin/bash\n",
+				"/usr/bin/sudo yum --enablerepo=epel -y install ruby-json \n",
+				"/opt/aws/bin/cfn-init --region ", { "Ref" : "AWS::Region" },
+				" -s ", { "Ref" : "AWS::StackName" }, " -r WebAZ1EC2Instance ",
+				" --access-key ", { "Ref" : "AccessKey" },
+				" --secret-key ", { "Ref" : "SecretKey" }, "\n",
+				"/bin/echo wpcfn_database=WordPressDB > /tmp/wpsourceprofile; /bin/echo wpcfn_user=", { "Ref" : "DatabaseUser" } ," >> /tmp/wpsourceprofile\n",
+				"/bin/echo wpcfn_password=", { "Ref" : "DatabasePassword" } ," >> /tmp/wpsourceprofile\n",
+				"/bin/echo wpcfn_host=", { "Fn::GetAtt" : [ "DatabaseInstance", "PrivateDnsName" ] } ," >> /tmp/wpsourceprofile\n",
+				"/opt/aws/bin/cfn-signal -e $? '", { "Ref" : "ApplicationWaitHandle" }, "'\n"
+			]]}},
+			"KeyName": { "Ref": "KeyName" },
+			"SubnetId": {"Ref": "PublicSubnet1"},
+			"Tags": [
+				{ "Key": "Name", "Value": {"Fn::Join": ["", [{"Ref": "AWS::StackName"}, "-WebAZ1-instance"]]}},
+				{ "Key": "Creator", "Value": "Candidate-X4aB2gDr" }
+			],
+			"InstanceType": { "Ref": "InstanceType" }
+		}
+	},
+		
+	"WebEIP": {
+      "Type": "AWS::EC2::EIP",
+      "Properties": {
+        "Domain" : "vpc"
+      }
+    },
+    "WebEIPAssociation": {
+      "Type": "AWS::EC2::EIPAssociation",
+      "DependsOn": [
+        "WebAZ1EC2Instance",
+        "WebEIP"
+      ],
+      "Properties": {
+        "InstanceId": {"Ref": "WebAZ1EC2Instance"},
+        "AllocationId": { "Fn::GetAtt" : [ "WebEIP", "AllocationId" ]}
+      }
+    },
+	
+	
+	"WebAZ2EC2Instance": {
+		"Type": "AWS::EC2::Instance",
+		"DependsOn": [ "WebServerSecurityGroup", "WebEIPAssociation" ],
+		"Metadata" : {
+			"AWS::CloudFormation::Init" : {
+				"config" : {
+					"packages" : {
+						"yum" : {
+							"puppet" : [],
+							"ruby-devel" : [],
+							"gcc" : [],
+							"make" : [],
+							"rubygems" : [],
+							"mysql" : [],
+							"jq" : []
+						},
+						"rubygems" : {
+							"json" : []
+						}
+					},
+					"files" : {
+						"/etc/yum.repos.d/epel.repo" : {
+							 "source" : "https://s3.amazonaws.com/candidate-x4ab2gdr/amzLinuxEpelRepo",
+							 "mode" : "000644",
+							 "owner" : "root",
+							 "group" : "root"
+						},
+						"/tmp/wordpress.conf" : {
+							"source" : "https://s3.amazonaws.com/candidate-x4ab2gdr/wordpress.conf",
+							 "mode" : "000644",
+							 "owner" : "root",
+							 "group" : "root"							
+						},
+						"/etc/puppet/puppet.conf" : {
+							"content" : { "Fn::Join" : ["", [
+								"[main]\n",
+								" logdir=/var/log/puppet\n",
+								" rundir=/var/run/puppet\n",
+								" ssldir=$vardir/ssl\n",
+								" pluginsync=true\n",
+								"[agent]\n",
+								" classfile=$vardir/classes.txt\n",
+								" localconfig=$vardir/localconfig\n",
+								" server=",{ "Fn::GetAtt" : [ "PuppetMasterInstance", "PrivateDnsName" ] },"\n"
+							]] },
+							 "mode" : "000644",
+							 "owner" : "root",
+							 "group" : "root"
+						}
+					},
+					"services" : {
+						"sysvinit" : {
+							"puppet" : {
+								"enabled" : "true",
+								"ensureRunning" : "true"
+							}
+						}
+					}
+				}
+			},
+			"Puppet" : {
+				 "roles" : [ "wordpress" ],
+				 "host" : { "Fn::GetAtt" : [ "DatabaseInstance", "PrivateDnsName" ] },
+				 "wpurl" : { "Fn::GetAtt": [ "WebAZ1EC2Instance", "PublicDnsName" ] },
+				 "database" : "WordPressDB",
+				 "user" : {"Ref" : "DatabaseUser"},
+				 "password" : {"Ref" : "DatabasePassword" }
+			}
+		},
+		"Properties": {
+			"SecurityGroupIds" : [ {"Ref" : "WebServerSecurityGroup"}, {"Ref" : "RemoteAccessSecurityGroup"}, {"Ref" : "InternalAccessSecurityGroup"} ],
+			"ImageId": { "Fn::FindInMap": [ "AWSRegionArch2AMI", { "Ref": "AWS::Region" }, { "Fn::FindInMap": [ "AWSInstanceType2Arch", { "Ref": "InstanceType" }, "Arch" ] } ]
+			},
+			"UserData" : { "Fn::Base64" : { "Fn::Join" : ["", [
+				"#!/bin/bash\n",
+				"/usr/bin/sudo yum --enablerepo=epel -y install ruby-json \n",
+				"/opt/aws/bin/cfn-init --region ", { "Ref" : "AWS::Region" },
+				" -s ", { "Ref" : "AWS::StackName" }, " -r WebAZ2EC2Instance ",
+				" --access-key ", { "Ref" : "AccessKey" },
+				" --secret-key ", { "Ref" : "SecretKey" }, "\n",
+				"/bin/echo wpcfn_database=WordPressDB > /tmp/wpsourceprofile; /bin/echo wpcfn_user=", { "Ref" : "DatabaseUser" } ," >> /tmp/wpsourceprofile\n",
+				"/bin/echo wpcfn_password=", { "Ref" : "DatabasePassword" } ," >> /tmp/wpsourceprofile\n",
+				"/bin/echo wpcfn_host=", { "Fn::GetAtt" : [ "DatabaseInstance", "PrivateDnsName" ] } ," >> /tmp/wpsourceprofile\n",
+				"/opt/aws/bin/cfn-signal -e $? '", { "Ref" : "Application2WaitHandle" }, "'\n"
+			]]}},
+			"KeyName": { "Ref": "KeyName" },
+			"SubnetId": {"Ref": "PublicSubnet2"},
+			"Tags": [
+				{ "Key": "Name", "Value": {"Fn::Join": ["", [{"Ref": "AWS::StackName"}, "-WebAZ2-instance"]]}},
+				{ "Key": "Creator", "Value": "Candidate-X4aB2gDr" }
+			],
+			"InstanceType": { "Ref": "InstanceType" }
+		}
+	},
+		
+	"Web2EIP": {
+      "Type": "AWS::EC2::EIP",
+      "Properties": {
+        "Domain" : "vpc"
+      }
+    },
+    "Web2EIPAssociation": {
+      "Type": "AWS::EC2::EIPAssociation",
+      "DependsOn": [
+        "WebAZ2EC2Instance",
+        "Web2EIP"
+      ],
+      "Properties": {
+        "InstanceId": {"Ref": "WebAZ2EC2Instance"},
+        "AllocationId": { "Fn::GetAtt" : [ "Web2EIP", "AllocationId" ]}
+      }
+    },
+
+
+	
+	
+	"PuppetMasterWaitHandle" : {
+		"Type" : "AWS::CloudFormation::WaitConditionHandle"
+	},
+	"PuppetMasterWaitCondition" : {
+		"Type" : "AWS::CloudFormation::WaitCondition",
+		"DependsOn" : "PuppetMasterInstance",
+		"Properties" : {
+			"Handle" : { "Ref" : "PuppetMasterWaitHandle" },
+			"Timeout" : "600"
+		}
+	},
+	
+	"DatabaseWaitHandle" : {
+		"Type" : "AWS::CloudFormation::WaitConditionHandle"
+	},
+	"DatabaseWaitCondition" : {
+		"Type" : "AWS::CloudFormation::WaitCondition",
+		"DependsOn" : "DatabaseInstance",
+		"Properties" : {
+			"Handle" : { "Ref" : "DatabaseWaitHandle" },
+			"Timeout" : "600"
+		}
+	},	
+
+
+	"Application2WaitHandle" : {
+		"Type" : "AWS::CloudFormation::WaitConditionHandle"
+	},
+	"Application2WaitCondition" : {
+		"Type" : "AWS::CloudFormation::WaitCondition",
+		"DependsOn" : "WebAZ2EC2Instance",
+		"Properties" : {
+			"Handle" : { "Ref" : "Application2WaitHandle" },
+			"Timeout" : "600"
+		}
+	},
+
+	
+	"ApplicationWaitHandle" : {
+		"Type" : "AWS::CloudFormation::WaitConditionHandle"
+	},
+	"ApplicationWaitCondition" : {
+		"Type" : "AWS::CloudFormation::WaitCondition",
+		"DependsOn" : "WebAZ1EC2Instance",
+		"Properties" : {
+			"Handle" : { "Ref" : "ApplicationWaitHandle" },
+			"Timeout" : "600"
+		}
+	}
+	
+	
+  },
+  "Outputs": {
+	"WebsiteURL": {
+		"Value": { "Fn::Join": [ "", [ "http://", { "Fn::GetAtt": [ "WebAZ1EC2Instance", "PublicDnsName" ] }, "/wordpress" ] ] },
+		"Description" : "URL of the WordPress website"
+	}
+  },
+  "Metadata" : {
+    "AWS::CloudFormation::Interface" : {
+      "ParameterGroups" : [
+        {
+          "Label" : { "default" : "Remote Configurations" },
+          "Parameters" : [ "RemoteMgmtNetwork" ]
+        },
+        {
+          "Label" : { "default" : "AWS Network Configurations" },
+          "Parameters" : [
+            "VPCSubnetCidrBlock",
+            "PublicSubnetCidrBlock1",
+            "PublicSubnetCidrBlock2",
+            "PrivateSubnetCidrBlock1"
+          ]
+        }
+      ],
+      "ParameterLabels" : {
+        "VPCSubnetCidrBlock" : { "default" : "VPC Subnet" },
+        "PublicSubnetCidrBlock1" : { "default" : "Public Subnet 1" },
+        "PublicSubnetCidrBlock2" : { "default" : "Public Subnet 2" },
+        "PrivateSubnetCidrBlock1" : { "default" : "Private Subnet 1" }
+      }
+    }
+  }
+}
