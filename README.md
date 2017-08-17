@@ -11,15 +11,37 @@ This AWS Cloudformation template provides an automated solution to build WordPre
 The reasons for the separation between Web server and database server are for security and scalability. It is a recommended security best practice to place database server on a Internet non-accessible subnet while leaving the web server(s) on the DMZ/ Internet accessible subnet. In addition, this separation makes it possible to scale out the web server front-end in the event of high HTTP traffic loads.
 
 
+
 Assumption
 
 Below assumptions were made in order to simplify this project:
-1. The end-to-end Cloudformation solution and all its associated resources will be run on AWS us-east-1 (Northern Virginia) region. 
+1. The end-to-end Cloudformation solution and all its associated resources will be run on AWS us-east-2 (Ohio) region. 
 2. S3 bucket named "candidate-x4ab2gdr" has been created and will be used to host Puppet configuration code (module, manifest and classes), pre-populated WordPressDB MySQL dump backup files, and the necessary WordPress configuration files.
 3. For simplicity, access to "candidate-x4ab2gdr" S3 bucket does not need to be secured.  
 4. Building High Available Web server is not needed because of limited user access permission (no access to Elastic LoadBalance).
 5. Building MySQL server cluster in multi-AvailableZone is not needed in order to simplify the project.
 6. All the end-users are located in the U.S. north east region.
+
+
+
+Instruction
+
+Please follow below instructions to setup WordPress Puppet Cloudformation template for the first time:
+1. Create S3 bucket and upload all these files to the bucket:
+	- WordPressDB.dmp
+	- amzLinuxEpelRepo
+	- cfn-facter-plugin.rb
+	- wordpress-puppet-config.tar.gz
+	- wordpress.conf
+
+Note: All those above files are already publicly available at https://s3.amazonaws.com/candidate-x4ab2gdr/ S3 bucket.
+
+2. Choose your Cloudformation template:
+	- For IAM user WITHOUT access to Elastic LoadBalancer, please use this template:
+	  Budi_vpc_withNATGateway_LaunchInstance_PuppetServer_2Web_noELB_FINAL
+	  
+	- For IAM user WITH access to Elastic LoadBalancer, please use this template:
+	  Budi_vpc_withNATGateway_LaunchInstance_PuppetServer_2Web_ELoadBalance
 
 
 Approach
